@@ -7,6 +7,7 @@ import os
 import argparse
 from urllib.parse import urljoin
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 # Load .env file if it exists
 load_dotenv()
@@ -31,6 +32,11 @@ def get_tautulli_history(length=0):
     start = 0
     batch_size = 1000 if length == 0 else min(length, 1000)  # API max is 1000
 
+    # Progress bar for API requests - use total=None when fetching all records
+    total_records = length if length > 0 else None
+    pbar = tqdm(desc="Fetching history records", total=total_records, unit=" records")
+    total_discovered = False  # Track if we've discovered the total from API
+
     while True:
         params = {
             'apikey': TAUTULLI_API_KEY,
@@ -41,24 +47,40 @@ def get_tautulli_history(length=0):
 
         try:
             url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
-            print(f"Requesting batch starting at {start}: {url}")
+            pbar.write(f"Requesting batch starting at {start}: {url}")
             r = requests.get(url)
-            print(f"Response status: {r.status_code}")
+            pbar.write(f"Response status: {r.status_code}")
             if r.status_code != 200:
-                print(f"Response text: {r.text}")
+                pbar.write(f"Response text: {r.text}")
                 break
             r.raise_for_status()
             data = r.json()
 
             if 'response' in data and 'data' in data['response']:
-                if 'data' in data['response']['data']:
-                    records = data['response']['data']['data']
-                    print(f"Retrieved {len(records)} records in this batch")
+                response_data = data['response']['data']
+                if 'data' in response_data:
+                    records = response_data['data']
+                    pbar.write(f"Retrieved {len(records)} records in this batch")
+
+                    # Try to get total count from API response if we haven't discovered it yet
+                    if not total_discovered and length == 0:
+                        # Check common total count field names
+                        possible_total_keys = ['total_count', 'count', 'total', 'recordsTotal', 'totalRecords']
+                        for key in possible_total_keys:
+                            if key in response_data and isinstance(response_data[key], int):
+                                total_from_api = response_data[key]
+                                if total_from_api > 0:
+                                    pbar.total = total_from_api
+                                    pbar.refresh()  # Update the display
+                                    total_discovered = True
+                                    pbar.write(f"Total records available: {total_from_api}")
+                                    break
 
                     if not records:
                         break  # No more records
 
                     all_records.extend(records)
+                    pbar.update(len(records))  # Update progress bar
 
                     if length > 0 and len(all_records) >= length:
                         # If user specified a limit, stop when we reach it
@@ -71,18 +93,19 @@ def get_tautulli_history(length=0):
                     if len(records) < batch_size:
                         break
                 else:
-                    print("Unexpected response structure: no 'data' in response.data")
-                    print(f"Response: {data}")
+                    pbar.write("Unexpected response structure: no 'data' in response.data")
+                    pbar.write(f"Response: {data}")
                     break
             else:
-                print("Unexpected response structure: no 'response' or 'data'")
-                print(f"Response: {data}")
+                pbar.write("Unexpected response structure: no 'response' or 'data'")
+                pbar.write(f"Response: {data}")
                 break
 
         except Exception as e:
-            print(f"Error connecting to Tautulli: {e}")
+            pbar.write(f"Error connecting to Tautulli: {e}")
             break
 
+    pbar.close()  # Close the progress bar
     print(f"Total history records retrieved: {len(all_records)}")
     if all_records:
         print(f"Sample record keys: {list(all_records[0].keys())}")
@@ -113,10 +136,10 @@ def get_ip_location(ip, cache):
                 lat = data['lat']
                 lon = data['lon']
                 cache[ip] = (lat, lon)
-                print(f"Geolocated new IP: {ip} -> {data['city']}, {data['country']}")
+                tqdm.write(f"Geolocated new IP: {ip} -> {data['city']}, {data['country']}")
                 return (lat, lon)
     except Exception as e:
-        print(f"Error locating {ip}: {e}")
+        tqdm.write(f"Error locating {ip}: {e}")
 
     return None
 
@@ -162,15 +185,16 @@ def main():
     print(f"Found {len(unique_ips)} unique IP addresses.")
 
     locations = []
-    
-    for i, ip in enumerate(unique_ips):
+
+    print("Geolocating IP addresses...")
+    for i, ip in enumerate(tqdm(unique_ips, desc="Geolocating IPs")):
         loc = get_ip_location(ip, ip_cache)
         if loc:
             # Add the location to the list as many times as it appeared in history
             # This makes the heatmap 'hotter' for frequent locations
             count = ip_counts[ip]
             locations.append({'loc': loc, 'ip': ip, 'count': count})
-        
+
         # Save cache periodically
         if i % 10 == 0:
             with open(CACHE_FILE, 'w') as f:

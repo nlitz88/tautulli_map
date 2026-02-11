@@ -57,6 +57,12 @@ The script will:
 
 Open `plex_map.html` in your browser to view the map.
 
+## Sample Output
+
+![Sample Plex Access Map](example.png)
+
+*Example of a generated Plex access map showing global access patterns with heatmap and clustered markers.*
+
 ## Features
 
 - Heatmap showing access frequency

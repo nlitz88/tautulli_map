@@ -7,57 +7,61 @@ import os
 from urllib.parse import urljoin
 
 # ================= CONFIGURATION =================
-# Your Tautulli URL (e.g., http://192.168.1.5:8181)
-TAUTULLI_URL = 'http://192.168.0.51:8181'
-
-# Your Tautulli API Key (Settings -> Web Interface -> API Key)
-TAUTULLI_API_KEY = '1ce97cde2283434c93550d45f322a835'
+# Set these environment variables or edit below
+TAUTULLI_URL = os.getenv('TAUTULLI_URL', 'http://localhost:8181')  # Your Tautulli URL (e.g., http://192.168.1.5:8181)
+TAUTULLI_API_KEY = os.getenv('TAUTULLI_API_KEY', '')  # Your Tautulli API Key (Settings -> Web Interface -> API Key)
 
 # Filename for the output map
 OUTPUT_FILE = 'plex_map.html'
 # =================================================
+
+if not TAUTULLI_API_KEY:
+    print("ERROR: TAUTULLI_API_KEY environment variable not set.")
+    print("Please set it with: export TAUTULLI_API_KEY='your_api_key_here'")
+    print("Or edit the script to set TAUTULLI_API_KEY directly.")
+    exit(1)
 
 CACHE_FILE = 'ip_location_cache.json'
 
 def get_tautulli_history():
     """Fetches the entire history from Tautulli."""
     print("Connecting to Tautulli...")
-    base_url = urljoin(TAUTULLI_URL, '/api/v2')
-    history_data = []
-    start = 0
-    length = 1000 # Batch size
+    base_url = urljoin(TAUTULLI_URL.rstrip('/') + '/', 'api/v2')
+    params = {
+        'apikey': TAUTULLI_API_KEY,
+        'cmd': 'get_history'
+    }
 
-    while True:
-        params = {
-            'apikey': TAUTULLI_API_KEY,
-            'cmd': 'get_history',
-            'start': start,
-            'length': length
-        }
-        
-        try:
-            r = requests.get(base_url, params=params)
-            r.raise_for_status()
-            data = r.json()
-            
-            records = data['response']['data']['data']
-            if not records:
-                break
-                
-            history_data.extend(records)
-            print(f"Fetched {len(history_data)} records so far...")
-            
-            if len(records) < length:
-                break
-                
-            start += length
-            
-        except Exception as e:
-            print(f"Error connecting to Tautulli: {e}")
-            return []
+    try:
+        url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
+        print(f"Requesting: {url}")
+        r = requests.get(url)
+        print(f"Response status: {r.status_code}")
+        if r.status_code != 200:
+            print(f"Response text: {r.text}")
+        r.raise_for_status()
+        data = r.json()
 
-    print(f"Total history records retrieved: {len(history_data)}")
-    return history_data
+        if 'response' in data and 'data' in data['response']:
+            if 'data' in data['response']['data']:
+                records = data['response']['data']['data']
+                print(f"Total history records retrieved: {len(records)}")
+                if records:
+                    print(f"Sample record keys: {list(records[0].keys())}")
+                    print(f"Sample record: {records[0]}")
+                return records
+            else:
+                print("Unexpected response structure: no 'data' in response.data")
+                print(f"Response: {data}")
+        else:
+            print("Unexpected response structure: no 'response' or 'data'")
+            print(f"Response: {data}")
+
+    except Exception as e:
+        print(f"Error connecting to Tautulli: {e}")
+        return []
+
+    return []
 
 def get_ip_location(ip, cache):
     """

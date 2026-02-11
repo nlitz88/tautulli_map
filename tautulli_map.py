@@ -4,7 +4,12 @@ from folium.plugins import MarkerCluster, HeatMap
 import json
 import time
 import os
+import argparse
 from urllib.parse import urljoin
+from dotenv import load_dotenv
+
+# Load .env file if it exists
+load_dotenv()
 
 # ================= CONFIGURATION =================
 # Set these environment variables or edit below
@@ -15,22 +20,18 @@ TAUTULLI_API_KEY = os.getenv('TAUTULLI_API_KEY', '')  # Your Tautulli API Key (S
 OUTPUT_FILE = 'plex_map.html'
 # =================================================
 
-if not TAUTULLI_API_KEY:
-    print("ERROR: TAUTULLI_API_KEY environment variable not set.")
-    print("Please set it with: export TAUTULLI_API_KEY='your_api_key_here'")
-    print("Or edit the script to set TAUTULLI_API_KEY directly.")
-    exit(1)
-
 CACHE_FILE = 'ip_location_cache.json'
 
-def get_tautulli_history():
-    """Fetches the entire history from Tautulli."""
+def get_tautulli_history(length=0):
+    """Fetches history from Tautulli. length=0 means all records."""
     print("Connecting to Tautulli...")
     base_url = urljoin(TAUTULLI_URL.rstrip('/') + '/', 'api/v2')
     params = {
         'apikey': TAUTULLI_API_KEY,
         'cmd': 'get_history'
     }
+    if length > 0:
+        params['length'] = length
 
     try:
         url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
@@ -95,6 +96,17 @@ def get_ip_location(ip, cache):
     return None
 
 def main():
+    parser = argparse.ArgumentParser(description='Generate map of Plex access locations from Tautulli')
+    parser.add_argument('--length', type=int, default=0,
+                       help='Number of history records to fetch (0 = all, default: 0)')
+    args = parser.parse_args()
+
+    if not TAUTULLI_API_KEY:
+        print("ERROR: TAUTULLI_API_KEY environment variable not set.")
+        print("Please set it with: export TAUTULLI_API_KEY='your_api_key_here'")
+        print("Or edit the script to set TAUTULLI_API_KEY directly.")
+        exit(1)
+
     # 1. Load Cache
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, 'r') as f:
@@ -106,7 +118,7 @@ def main():
         ip_cache = {}
 
     # 2. Get History
-    history = get_tautulli_history()
+    history = get_tautulli_history(args.length)
     if not history:
         print("No history found or could not connect.")
         return

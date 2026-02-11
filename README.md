@@ -6,22 +6,47 @@ A Python script to visualize Plex server access locations from Tautulli data on 
 
 1. Install dependencies:
    ```bash
-   pip install requests folium
+   pip install requests folium python-dotenv
    ```
 
-2. Set environment variables:
+2. Configure credentials (choose one method):
+
+   **Option A: .env file** (recommended)
+   Create a `.env` file in the same directory as the script:
+   ```env
+   TAUTULLI_URL="http://your-tautulli-server:8181"
+   TAUTULLI_API_KEY="your-api-key-here"
+   ```
+
+   **Option B: Environment variables**
    ```bash
    export TAUTULLI_URL="http://your-tautulli-server:8181"
    export TAUTULLI_API_KEY="your-api-key-here"
    ```
 
-   Or edit the script directly to set `TAUTULLI_URL` and `TAUTULLI_API_KEY`.
+   **Option C: Edit the script directly**
+   Edit the `TAUTULLI_URL` and `TAUTULLI_API_KEY` variables in the script.
 
 ## Usage
 
 Run the script:
 ```bash
 python tautulli_map.py
+```
+
+Options:
+- `--length N`: Number of history records to fetch (0 = all records, default: 0)
+
+Examples:
+```bash
+# Get all history (default)
+python tautulli_map.py
+
+# Get last 1000 records
+python tautulli_map.py --length 1000
+
+# Get last 100 records
+python tautulli_map.py --length 100
 ```
 
 The script will:

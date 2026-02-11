@@ -187,7 +187,8 @@ def main():
     locations = []
 
     print("Geolocating IP addresses...")
-    for i, ip in enumerate(tqdm(unique_ips, desc="Geolocating IPs")):
+    pbar_geo = tqdm(total=len(unique_ips), desc="Geolocating IPs", unit=" IPs")
+    for i, ip in enumerate(unique_ips):
         loc = get_ip_location(ip, ip_cache)
         if loc:
             # Add the location to the list as many times as it appeared in history
@@ -195,10 +196,14 @@ def main():
             count = ip_counts[ip]
             locations.append({'loc': loc, 'ip': ip, 'count': count})
 
+        pbar_geo.update(1)  # Update progress bar for every IP processed
+
         # Save cache periodically
         if i % 10 == 0:
             with open(CACHE_FILE, 'w') as f:
                 json.dump(ip_cache, f)
+
+    pbar_geo.close()
 
     # Final cache save
     with open(CACHE_FILE, 'w') as f:

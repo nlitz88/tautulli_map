@@ -23,46 +23,71 @@ OUTPUT_FILE = 'plex_map.html'
 CACHE_FILE = 'ip_location_cache.json'
 
 def get_tautulli_history(length=0):
-    """Fetches history from Tautulli. length=0 means all records."""
+    """Fetches history from Tautulli. length=0 means all records via pagination."""
     print("Connecting to Tautulli...")
     base_url = urljoin(TAUTULLI_URL.rstrip('/') + '/', 'api/v2')
-    params = {
-        'apikey': TAUTULLI_API_KEY,
-        'cmd': 'get_history'
-    }
-    if length > 0:
-        params['length'] = length
 
-    try:
-        url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
-        print(f"Requesting: {url}")
-        r = requests.get(url)
-        print(f"Response status: {r.status_code}")
-        if r.status_code != 200:
-            print(f"Response text: {r.text}")
-        r.raise_for_status()
-        data = r.json()
+    all_records = []
+    start = 0
+    batch_size = 1000 if length == 0 else min(length, 1000)  # API max is 1000
 
-        if 'response' in data and 'data' in data['response']:
-            if 'data' in data['response']['data']:
-                records = data['response']['data']['data']
-                print(f"Total history records retrieved: {len(records)}")
-                if records:
-                    print(f"Sample record keys: {list(records[0].keys())}")
-                    print(f"Sample record: {records[0]}")
-                return records
+    while True:
+        params = {
+            'apikey': TAUTULLI_API_KEY,
+            'cmd': 'get_history',
+            'start': start,
+            'length': batch_size
+        }
+
+        try:
+            url = f"{base_url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
+            print(f"Requesting batch starting at {start}: {url}")
+            r = requests.get(url)
+            print(f"Response status: {r.status_code}")
+            if r.status_code != 200:
+                print(f"Response text: {r.text}")
+                break
+            r.raise_for_status()
+            data = r.json()
+
+            if 'response' in data and 'data' in data['response']:
+                if 'data' in data['response']['data']:
+                    records = data['response']['data']['data']
+                    print(f"Retrieved {len(records)} records in this batch")
+
+                    if not records:
+                        break  # No more records
+
+                    all_records.extend(records)
+
+                    if length > 0 and len(all_records) >= length:
+                        # If user specified a limit, stop when we reach it
+                        all_records = all_records[:length]
+                        break
+
+                    start += len(records)
+
+                    # Safety check: if we get less than batch_size, we've reached the end
+                    if len(records) < batch_size:
+                        break
+                else:
+                    print("Unexpected response structure: no 'data' in response.data")
+                    print(f"Response: {data}")
+                    break
             else:
-                print("Unexpected response structure: no 'data' in response.data")
+                print("Unexpected response structure: no 'response' or 'data'")
                 print(f"Response: {data}")
-        else:
-            print("Unexpected response structure: no 'response' or 'data'")
-            print(f"Response: {data}")
+                break
 
-    except Exception as e:
-        print(f"Error connecting to Tautulli: {e}")
-        return []
+        except Exception as e:
+            print(f"Error connecting to Tautulli: {e}")
+            break
 
-    return []
+    print(f"Total history records retrieved: {len(all_records)}")
+    if all_records:
+        print(f"Sample record keys: {list(all_records[0].keys())}")
+        print(f"Sample record: {all_records[0]}")
+    return all_records
 
 def get_ip_location(ip, cache):
     """

@@ -85,4 +85,5 @@ Open `plex_map.html` in your browser to view the map.
 
 ---
 
-*This project was created with the assistance of Cline, an AI-powered coding assistant.*
+## Disclosure
+This project was created with the assistance of Cline, an AI-powered coding assistant.

@@ -4,12 +4,19 @@ A Python script to visualize Plex server access locations from Tautulli data on 
 
 ## Setup
 
-1. Install dependencies:
+1. **Download the code:**
+   Open a terminal and run this command to download the project:
    ```bash
-   pip install requests folium python-dotenv
+   git clone https://github.com/nlitz88/tautulli_map.git
+   cd tautulli_map
    ```
 
-2. Configure credentials (choose one method):
+2. **Install dependencies:**
+   ```bash
+   pip install requests folium python-dotenv tqdm
+   ```
+
+3. **Configure credentials** (choose one method):
 
    **Option A: .env file** (recommended)
    Create a `.env` file in the same directory as the script:
@@ -75,3 +82,7 @@ Open `plex_map.html` in your browser to view the map.
 - Ensure Tautulli is running and accessible
 - Check your API key in Tautulli Settings > Web Interface > API Key
 - Verify the TAUTULLI_URL is correct
+
+---
+
+*This project was created with the assistance of Cline, an AI-powered coding assistant.*

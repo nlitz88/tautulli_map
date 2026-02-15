@@ -13,12 +13,18 @@ A Python script to visualize Plex server access locations from Tautulli data on 
    cd tautulli_map
    ```
 
-2. **Install dependencies:**
+2. **Set up virtual environment:**
    ```bash
-   pip install requests folium python-dotenv tqdm
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Configure credentials** (choose one method):
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure credentials** (choose one method):
 
    **Option A: .env file** (recommended)
    Create a `.env` file in the same directory as the script:

@@ -2,6 +2,8 @@
 
 A Python script to visualize Plex server access locations from Tautulli data on an interactive map.
 
+![Sample Plex Access Map](example.png)
+
 ## Setup
 
 1. **Download the code:**
@@ -63,12 +65,6 @@ The script will:
 - Save as `plex_map.html`
 
 Open `plex_map.html` in your browser to view the map.
-
-## Sample Output
-
-![Sample Plex Access Map](example.png)
-
-*Example of a generated Plex access map showing global access patterns with heatmap and clustered markers.*
 
 ## Features
 
